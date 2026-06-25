@@ -88,6 +88,11 @@
   }
 
   function isActuallyPlaying() {
+    const media = getActiveMediaElement();
+    if (media) {
+      return !media.paused && !media.ended && media.readyState > 2;
+    }
+
     const audio = document.querySelector("audio");
     if (audio) {
       return !audio.paused && !audio.ended && audio.readyState > 2;
@@ -200,8 +205,26 @@
     return null;
   }
 
+  function getActiveMediaElement() {
+    const candidates = [...document.querySelectorAll("audio, video")];
+    const playing = candidates.find(
+      (el) =>
+        !el.paused &&
+        !el.ended &&
+        el.readyState >= 2 &&
+        Number.isFinite(el.currentTime)
+    );
+    if (playing) return playing;
+
+    return (
+      candidates.find((el) => Number.isFinite(el.duration) && el.duration > 0) ||
+      candidates[0] ||
+      null
+    );
+  }
+
   function readPlayerState() {
-    const audio = document.querySelector("audio");
+    const media = getActiveMediaElement();
     const titleLink =
       document.querySelector("a.playbackSoundBadge__titleLink") ||
       document.querySelector('a[class*="playbackSoundBadge"][href*="soundcloud.com/"]');
@@ -210,8 +233,8 @@
       document.querySelector("a.playbackSoundBadge__lightLink") ||
       document.querySelector('a[class*="playbackSoundBadge"][class*="light"][href]');
 
-    const duration = audio?.duration;
-    const currentTime = audio?.currentTime;
+    const duration = media?.duration;
+    const currentTime = media?.currentTime;
 
     return {
       permalink: titleLink?.href ?? null,

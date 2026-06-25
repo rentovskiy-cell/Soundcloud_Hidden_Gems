@@ -1032,6 +1032,107 @@ input[type="range"] {
   font-variant-numeric: tabular-nums;
 }
 
+.user-tags-cell {
+  min-width: 88px;
+  max-width: 140px;
+  vertical-align: top;
+}
+
+.user-tags-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.user-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 4px 2px 6px;
+  border: 1px solid #4a3820;
+  border-radius: 999px;
+  background: #2a2010;
+  font-size: 0.6875rem;
+  line-height: 1.2;
+}
+
+.user-tag-chip-list {
+  cursor: pointer;
+  padding: 5px 10px;
+  font-size: 0.75rem;
+  gap: 6px;
+}
+
+.user-tag-chip-active {
+  border-color: #ffb347;
+  background: #3a2810;
+}
+
+.user-tag-filter {
+  border: none;
+  background: transparent;
+  color: #ffd9a0;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.user-tag-filter:hover {
+  color: #fff;
+}
+
+.user-tag-remove {
+  border: none;
+  background: transparent;
+  color: #8b7355;
+  padding: 0 2px;
+  font-size: 0.875rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.user-tag-remove:hover {
+  color: #ffb347;
+}
+
+.user-tag-add {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1px dashed #4a3820;
+  border-radius: 999px;
+  background: transparent;
+  color: #ffb347;
+  font-size: 0.875rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.user-tag-add:hover {
+  border-color: #ffb347;
+  background: #2a2010;
+}
+
+.user-tag-chip-name {
+  color: #ffd9a0;
+}
+
+.user-tag-chip-count {
+  color: #8b7355;
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.active-user-tag-bar {
+  border-color: #ffb347;
+}
+
+.active-user-tag-bar strong {
+  color: #ffb347;
+}
+
 .muted-inline {
   margin: 0;
   color: #8b93a7;

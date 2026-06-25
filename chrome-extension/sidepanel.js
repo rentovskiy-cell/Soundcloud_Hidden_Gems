@@ -2,7 +2,8 @@ const STORAGE_SEEN = "sc-hidden-gems-seen";
 const STORAGE_GEMS = "sc-hidden-gems-favorites";
 const STORAGE_CUSTOM_PRESETS = "sc-hidden-gems-custom-presets";
 const STORAGE_LIKES_CACHE = "sc-hidden-gems-likes-cache";
-const EXTENSION_VERSION = "2.0.0";
+const STORAGE_USER_TAGS = "sc-hidden-gems-user-tags";
+const EXTENSION_VERSION = "2.1.2";
 const PRIVACY_POLICY_URL =
   "https://github.com/YOUR_USERNAME/Soundcloud_Hidden_Gems/blob/main/docs/privacy.html";
 const BUILTIN_PRESET_NAME = "Default";
@@ -330,6 +331,29 @@ function clearTagFilter() {
   applyFilters();
 }
 
+function clearUserTagFilter({ apply = true } = {}) {
+  state.userTagFilter = null;
+  state.userTagFilterDisplay = null;
+  updateActiveUserTagBar();
+  if (apply) {
+    updateActiveFilterSummary();
+    applyFilters();
+  }
+}
+
+function setUserTagFilter(normalizedKey, displayName) {
+  const key = normalizeUserTagKey(normalizedKey) || normalizeUserTagKey(displayName);
+  if (!key) {
+    clearUserTagFilter();
+    return;
+  }
+  state.userTagFilter = key;
+  state.userTagFilterDisplay = formatTagDisplay(displayName || normalizedKey || key);
+  updateActiveUserTagBar();
+  updateActiveFilterSummary();
+  applyFilters();
+}
+
 function setTagFilter(normalizedKey, displayName) {
   const key = normalizeTag(normalizedKey) || normalizeTag(displayName);
   if (!key) {
@@ -381,6 +405,104 @@ function parseTrackTags(track) {
 
 function trackHasTag(track, tagKey) {
   return parseTrackTags(track).some((t) => t.key === tagKey);
+}
+
+function getUserTagsMap() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(STORAGE_USER_TAGS) || "{}");
+    return raw && typeof raw === "object" ? raw : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveUserTagsMap(map) {
+  localStorage.setItem(STORAGE_USER_TAGS, JSON.stringify(map));
+}
+
+function getUserTagsForTrack(trackId) {
+  if (trackId == null) return [];
+  const list = getUserTagsMap()[String(trackId)];
+  if (!Array.isArray(list)) return [];
+  return list.map(formatTagDisplay).filter(Boolean);
+}
+
+function normalizeUserTagKey(value) {
+  return normalizeTag(value);
+}
+
+function setUserTagsForTrack(trackId, displays) {
+  const id = String(trackId);
+  const map = getUserTagsMap();
+  const tags = [...new Set(displays.map(formatTagDisplay).filter(Boolean))];
+  if (tags.length === 0) delete map[id];
+  else map[id] = tags;
+  saveUserTagsMap(map);
+}
+
+function addUserTag(trackId, rawTag) {
+  const display = formatTagDisplay(rawTag);
+  if (!display || trackId == null) return;
+  const existing = getUserTagsForTrack(trackId);
+  const key = normalizeUserTagKey(display);
+  if (existing.some((tag) => normalizeUserTagKey(tag) === key)) return;
+  setUserTagsForTrack(trackId, [...existing, display]);
+}
+
+function removeUserTag(trackId, tagKey) {
+  if (trackId == null || !tagKey) return;
+  const filtered = getUserTagsForTrack(trackId).filter(
+    (tag) => normalizeUserTagKey(tag) !== tagKey
+  );
+  setUserTagsForTrack(trackId, filtered);
+}
+
+function trackHasUserTag(track, tagKey) {
+  return getUserTagsForTrack(track.id).some((tag) => normalizeUserTagKey(tag) === tagKey);
+}
+
+function computeTopUserTags(tracks) {
+  const groups = new Map();
+
+  for (const track of tracks) {
+    for (const display of getUserTagsForTrack(track.id)) {
+      const key = normalizeUserTagKey(display);
+      if (!key) continue;
+      if (!groups.has(key)) {
+        groups.set(key, { count: 0, display });
+      }
+      groups.get(key).count += 1;
+    }
+  }
+
+  return [...groups.entries()]
+    .map(([key, { count, display }]) => ({ key, display, count }))
+    .sort((a, b) => b.count - a.count || a.display.localeCompare(b.display));
+}
+
+function renderUserTagsCell(track) {
+  const trackId = escapeHtml(track.id ?? "");
+  const tags = getUserTagsForTrack(track.id);
+  const chips = tags
+    .map((display) => {
+      const key = normalizeUserTagKey(display);
+      const active = state.userTagFilter === key ? " user-tag-chip-active" : "";
+      return `<span class="user-tag-chip${active}">
+          <button type="button" class="user-tag-filter" data-user-tag-key="${escapeHtml(key)}" data-user-tag-display="${escapeHtml(display)}">${escapeHtml(display)}</button>
+          <button type="button" class="user-tag-remove" data-remove-user-tag data-track-id="${trackId}" data-user-tag-key="${escapeHtml(key)}" aria-label="Remove tag">×</button>
+        </span>`;
+    })
+    .join("");
+
+  return `<td class="user-tags-cell">
+    <div class="user-tags-wrap">${chips}<button type="button" class="user-tag-add" data-add-user-tag data-track-id="${trackId}" aria-label="Add tag">+</button></div>
+  </td>`;
+}
+
+function readUserTagFromButton(btn) {
+  const key = btn.getAttribute("data-user-tag-key") ?? btn.dataset.userTagKey ?? "";
+  const display = btn.getAttribute("data-user-tag-display") ?? btn.dataset.userTagDisplay ?? "";
+  return { key, display };
 }
 
 function readTagFromButton(btn) {
@@ -528,6 +650,8 @@ const state = {
   artistFilterDisplay: null,
   tagFilter: null,
   tagFilterDisplay: null,
+  userTagFilter: null,
+  userTagFilterDisplay: null,
   searchQuery: "",
   isApplyingPreset: false,
   filteredTracks: [],
@@ -540,6 +664,10 @@ const digSession = {
   advanceMode: "percent",
   advanceValue: 50,
   advancedForTrackId: null,
+  playingTrackId: null,
+  playingSince: null,
+  mediaTimeAtStart: 0,
+  pollTimer: null,
 };
 
 const els = {};
@@ -613,6 +741,9 @@ function cacheElements() {
     activeTagBar: document.getElementById("active-tag-bar"),
     tagFilterName: document.getElementById("tag-filter-name"),
     clearTagFilter: document.getElementById("clear-tag-filter"),
+    activeUserTagBar: document.getElementById("active-user-tag-bar"),
+    userTagFilterName: document.getElementById("user-tag-filter-name"),
+    clearUserTagFilter: document.getElementById("clear-user-tag-filter"),
     activeFilterList: document.getElementById("active-filter-list"),
     resetFilters: document.getElementById("reset-filters"),
     filters: document.getElementById("filters"),
@@ -666,6 +797,9 @@ function cacheElements() {
     browseLabelsList: document.getElementById("browse-labels-list"),
     topTags: document.getElementById("top-tags"),
     topTagsList: document.getElementById("top-tags-list"),
+    myTags: document.getElementById("my-tags"),
+    myTagsList: document.getElementById("my-tags-list"),
+    myTagsSummary: document.getElementById("my-tags-summary"),
     trackSearch: document.getElementById("track-search"),
     error: document.getElementById("error"),
     tableWrap: document.getElementById("table-wrap"),
@@ -756,9 +890,13 @@ async function startDigSession() {
 
   digSession.active = true;
   digSession.advancedForTrackId = null;
+  digSession.playingTrackId = null;
+  digSession.playingSince = null;
+  digSession.mediaTimeAtStart = 0;
   updateDigToggleButton();
   updateDigStatus();
   hidePlaybackError();
+  startDigPolling();
 
   if (!PlaybackController.currentTrack || !PlaybackController.isPlaying) {
     await playNextGem({ fromDig: true });
@@ -768,24 +906,87 @@ async function startDigSession() {
 function stopDigSession() {
   digSession.active = false;
   digSession.advancedForTrackId = null;
+  digSession.playingTrackId = null;
+  digSession.playingSince = null;
+  digSession.mediaTimeAtStart = 0;
+  stopDigPolling();
   updateDigToggleButton();
   els.digStatus.classList.add("hidden");
+}
+
+function startDigPolling() {
+  if (digSession.pollTimer) return;
+  digSession.pollTimer = setInterval(() => {
+    if (digSession.active) PlaybackController.pollPlayerState();
+  }, 500);
+}
+
+function stopDigPolling() {
+  if (!digSession.pollTimer) return;
+  clearInterval(digSession.pollTimer);
+  digSession.pollTimer = null;
+}
+
+function syncDigPlaybackClock(playbackState) {
+  const { currentTrack, isPlaying, currentTime } = playbackState;
+  const trackId = currentTrack?.id != null ? String(currentTrack.id) : null;
+
+  if (!digSession.active || !trackId || !isPlaying) {
+    digSession.playingTrackId = null;
+    digSession.playingSince = null;
+    digSession.mediaTimeAtStart = 0;
+    return;
+  }
+
+  if (trackId !== digSession.playingTrackId) {
+    digSession.playingTrackId = trackId;
+    digSession.playingSince = Date.now();
+    digSession.mediaTimeAtStart = Number(currentTime) || 0;
+    digSession.advancedForTrackId = null;
+  }
+}
+
+function getEffectivePlaybackSeconds(playbackState) {
+  const mediaTime = Number(playbackState.currentTime) || 0;
+  if (!digSession.playingSince) return mediaTime;
+
+  const wallTime =
+    (Date.now() - digSession.playingSince) / 1000 + (digSession.mediaTimeAtStart || 0);
+  return Math.max(mediaTime, wallTime);
+}
+
+function getEffectiveDurationSeconds(playbackState) {
+  const mediaDuration = Number(playbackState.duration) || 0;
+  if (mediaDuration > 0) return mediaDuration;
+
+  const trackId = playbackState.currentTrack?.id;
+  if (trackId == null) return 0;
+  const track = state.allTracks.find((item) => String(item.id) === String(trackId));
+  if (track?.duration > 0) return track.duration / 1000;
+  return 0;
 }
 
 function handleDigAdvance(playbackState) {
   if (!digSession.active) return;
 
-  const { currentTrack, isPlaying, currentTime, duration } = playbackState;
+  syncDigPlaybackClock(playbackState);
+
+  const { currentTrack, isPlaying } = playbackState;
   if (!currentTrack?.id || !isPlaying) return;
 
   const trackId = String(currentTrack.id);
   if (digSession.advancedForTrackId === trackId) return;
 
+  const elapsed = getEffectivePlaybackSeconds(playbackState);
   let reached = false;
+
   if (digSession.advanceMode === "seconds") {
-    reached = currentTime >= digSession.advanceValue;
-  } else if (duration > 0) {
-    reached = currentTime / duration >= digSession.advanceValue / 100;
+    reached = elapsed >= digSession.advanceValue;
+  } else {
+    const duration = getEffectiveDurationSeconds(playbackState);
+    if (duration > 0) {
+      reached = elapsed / duration >= digSession.advanceValue / 100;
+    }
   }
 
   if (!reached) return;
@@ -956,6 +1157,7 @@ function matchesSearchQuery(track, query) {
     track.genre,
     track.tag_list,
     getTrackLabelRaw(track),
+    getUserTagsForTrack(track.id).join(" "),
   ]
     .filter(Boolean)
     .join(" ")
@@ -1035,6 +1237,9 @@ async function playNextGem({ fromDig = false } = {}) {
   }
 
   digSession.advancedForTrackId = null;
+  digSession.playingTrackId = null;
+  digSession.playingSince = null;
+  digSession.mediaTimeAtStart = 0;
 
   if (!fromDig) {
     if (result.pending && !PlaybackController.isPlaying) {
@@ -1156,12 +1361,18 @@ function trackExportShape(track) {
     artist: artist.display ?? "",
     label_name: track.label_name ?? "",
     genre: track.genre ?? "",
+    user_tags: getUserTagsForTrack(track.id),
     permalink_url: track.permalink_url ?? "",
     playback_count: track.playback_count ?? null,
     followers_count: track.followers_count ?? null,
     duration: track.duration ?? null,
     played_at: track.played_at ?? null,
   };
+}
+
+function countGemsInLibrary() {
+  const gems = getGemsSet();
+  return state.allTracks.filter((track) => track.id != null && gems.has(String(track.id))).length;
 }
 
 function getMyGemTracks() {
@@ -1432,6 +1643,7 @@ function bindPresetActions() {
   els.clearLabelFilter.addEventListener("click", () => clearLabelFilter());
   els.clearArtistFilter.addEventListener("click", () => clearArtistFilter());
   els.clearTagFilter.addEventListener("click", () => clearTagFilter());
+  els.clearUserTagFilter.addEventListener("click", () => clearUserTagFilter());
 
   els.resetFilters.addEventListener("click", () => resetFilters());
 }
@@ -1506,11 +1718,14 @@ function resetFilters() {
   state.artistFilterDisplay = null;
   state.tagFilter = null;
   state.tagFilterDisplay = null;
+  state.userTagFilter = null;
+  state.userTagFilterDisplay = null;
   state.searchQuery = "";
   els.trackSearch.value = "";
   updateActiveLabelBar();
   updateActiveArtistBar();
   updateActiveTagBar();
+  updateActiveUserTagBar();
   applyPreset(DEFAULT_PRESET, { syncDropdown: true });
 }
 
@@ -1565,6 +1780,14 @@ function bindTableActions() {
     }
   });
 
+  els.myTagsList.addEventListener("click", (event) => {
+    const btn = event.target.closest("[data-user-tag-key]");
+    if (btn) {
+      const { key, display } = readUserTagFromButton(btn);
+      setUserTagFilter(key, display);
+    }
+  });
+
   els.topArtistsList.addEventListener("click", (event) => {
     const btn = event.target.closest("[data-artist-key]");
     if (btn) {
@@ -1612,6 +1835,31 @@ function bindTableActions() {
       return;
     }
 
+    const addUserTagBtn = event.target.closest("[data-add-user-tag]");
+    if (addUserTagBtn) {
+      const trackId = addUserTagBtn.dataset.trackId;
+      const raw = prompt("Add tag:");
+      const trimmed = String(raw ?? "").trim();
+      if (!trimmed) return;
+      addUserTag(trackId, trimmed);
+      applyFilters();
+      return;
+    }
+
+    const removeUserTagBtn = event.target.closest("[data-remove-user-tag]");
+    if (removeUserTagBtn) {
+      removeUserTag(removeUserTagBtn.dataset.trackId, removeUserTagBtn.dataset.userTagKey);
+      applyFilters();
+      return;
+    }
+
+    const userTagBtn = event.target.closest(".user-tag-filter");
+    if (userTagBtn) {
+      const { key, display } = readUserTagFromButton(userTagBtn);
+      setUserTagFilter(key, display);
+      return;
+    }
+
     const link = event.target.closest("[data-open-track]");
     if (link?.dataset.trackId) markSeen(link.dataset.trackId);
   });
@@ -1641,7 +1889,10 @@ function buildActiveFilterSummaryItems() {
     items.push(`Artist: ${state.artistFilterDisplay ?? state.artistFilter}`);
   }
   if (state.tagFilter) {
-    items.push(`Tag: ${state.tagFilterDisplay ?? state.tagFilter}`);
+    items.push(`SC tag: ${state.tagFilterDisplay ?? state.tagFilter}`);
+  }
+  if (state.userTagFilter) {
+    items.push(`My tag: ${state.userTagFilterDisplay ?? state.userTagFilter}`);
   }
   if (state.searchQuery) {
     items.push(`Search: "${state.searchQuery}"`);
@@ -1675,6 +1926,15 @@ function updateActiveFilterSummary() {
   els.activeFilterList.innerHTML = items
     .map((item) => `<li>${escapeHtml(item)}</li>`)
     .join("");
+}
+
+function updateActiveUserTagBar() {
+  if (state.userTagFilter) {
+    els.userTagFilterName.textContent = state.userTagFilterDisplay ?? state.userTagFilter;
+    els.activeUserTagBar.classList.remove("hidden");
+  } else {
+    els.activeUserTagBar.classList.add("hidden");
+  }
 }
 
 function updateActiveTagBar() {
@@ -1801,8 +2061,11 @@ function filterTracks(tracks) {
     if (!matchesSearchQuery(track, state.searchQuery)) return false;
 
     if (state.tagFilter && !trackHasTag(track, state.tagFilter)) return false;
+    if (state.userTagFilter && !trackHasUserTag(track, state.userTagFilter)) return false;
 
-    if (state.activeTab === "session") {
+    if (state.activeTab === "session" || state.activeTab === "gems") {
+      if (state.labelFilter && getTrackLabelInfo(track).key !== state.labelFilter) return false;
+      if (state.artistFilter && getArtistInfo(track).key !== state.artistFilter) return false;
       return true;
     }
 
@@ -1993,6 +2256,27 @@ function computeTopTags(tracks) {
     .sort((a, b) => b.count - a.count);
 }
 
+function renderMyTags(tracks) {
+  const top = computeTopUserTags(tracks);
+  els.myTagsSummary.textContent = `My Tags (${formatNumber(top.length)})`;
+
+  if (top.length === 0) {
+    els.myTagsList.innerHTML =
+      '<p class="muted-inline">No custom tags yet — click + in the table to add tags.</p>';
+    return;
+  }
+
+  els.myTagsList.innerHTML = top
+    .map(({ key, display, count }) => {
+      const active = state.userTagFilter === key ? " user-tag-chip-active" : "";
+      return `<button type="button" class="user-tag-chip user-tag-chip-list${active}" data-user-tag-key="${escapeHtml(key)}" data-user-tag-display="${escapeHtml(display)}">
+          <span class="user-tag-chip-name">${escapeHtml(display)}</span>
+          <span class="user-tag-chip-count">${formatNumber(count)}</span>
+        </button>`;
+    })
+    .join("");
+}
+
 function renderTopTags(tracks) {
   const top = computeTopTags(tracks).slice(0, 16);
   if (top.length === 0) {
@@ -2083,12 +2367,14 @@ function applyFilters() {
   updateActiveLabelBar();
   updateActiveArtistBar();
   updateActiveTagBar();
+  updateActiveUserTagBar();
   updateClipsUi();
   updateSessionUi();
   updateStatsSummary();
   updateEmptyResultsUi(matchingCount);
   updateSortHeaders();
   renderTopTags(state.allTracks);
+  renderMyTags(state.allTracks);
   renderTopArtists(state.allTracks);
   renderTopLabels(state.allTracks);
   renderBrowseLists(state.allTracks);
@@ -2230,23 +2516,33 @@ function showResults(message, { fromCache = false, cachedAt = null } = {}) {
 function renderTable(tracks) {
   if (tracks.length === 0) {
     let message = "No tracks match current filters.";
-    if (state.activeTab === "gems" && !state.labelFilter && !state.artistFilter) {
-      message = "No tracks in My Gems yet — star tracks on the All Tracks tab.";
+    if (state.activeTab === "gems") {
+      const savedCount = getGemsSet().size;
+      const inLibrary = countGemsInLibrary();
+      if (savedCount === 0) {
+        message = "No tracks in My Gems yet — star tracks on the All Tracks tab.";
+      } else if (inLibrary === 0) {
+        message = `${formatNumber(savedCount)} saved gem(s) not found in loaded likes — click Refresh.`;
+      } else {
+        message = "No gems match current search or tag filters.";
+      }
     } else if (state.activeTab === "session") {
       message = "No gems in this session yet — star tracks while digging.";
     } else if (state.labelFilter) {
       message = `No tracks found for label "${state.labelFilterDisplay ?? state.labelFilter}".`;
     } else if (state.artistFilter) {
       message = `No tracks found for artist "${state.artistFilterDisplay ?? state.artistFilter}".`;
+    } else if (state.userTagFilter) {
+      message = `No tracks found for my tag "${state.userTagFilterDisplay ?? state.userTagFilter}".`;
     } else if (state.tagFilter) {
-      message = `No tracks found for tag "${state.tagFilterDisplay ?? state.tagFilter}".`;
+      message = `No tracks found for SC tag "${state.tagFilterDisplay ?? state.tagFilter}".`;
     } else if (state.searchQuery) {
       message = `No tracks match search "${state.searchQuery}".`;
     } else if (els.clipsFilter.value === "only") {
       message = "No clips or snippets match current filters.";
     }
     els.tracksBody.innerHTML =
-      `<tr><td colspan="12" class="empty-row">${escapeHtml(message)}</td></tr>`;
+      `<tr><td colspan="13" class="empty-row">${escapeHtml(message)}</td></tr>`;
     return;
   }
 
@@ -2288,6 +2584,7 @@ function renderTable(tracks) {
         <td class="title">${isPlaying ? '<span class="playing-indicator">Playing</span> ' : ""}${sessionBadge}${premiereBadge}${clipBadge}${findFullBtn}${escapeHtml(track.title)}</td>
         <td class="artist">${artistKey ? `<button type="button" class="label-link${artistActive}" data-artist-key="${escapeHtml(artistKey)}" data-artist-display="${escapeHtml(artistDisplay)}">${escapeHtml(artistDisplay)}</button>${viaChannel}` : "—"}</td>
         <td class="label">${key ? `<button type="button" class="label-link${labelActive}" data-label-key="${escapeHtml(key)}" data-label-display="${escapeHtml(display)}">${escapeHtml(display)}</button>` : "—"}</td>
+        ${renderUserTagsCell(track)}
         <td class="num">${formatMetric(track.playback_count)}</td>
         <td class="num">${formatMetric(track.likes_count)}</td>
         <td class="num">${formatMetric(track.followers_count)}</td>

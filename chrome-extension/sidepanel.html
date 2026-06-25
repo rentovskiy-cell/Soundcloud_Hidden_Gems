@@ -12,7 +12,7 @@
       <div class="header-row">
         <div class="header-title-wrap">
           <h1>SoundCloud Hidden Gems</h1>
-          <span id="version-label" class="version-label">v2.0.0</span>
+          <span id="version-label" class="version-label">v2.1.2</span>
         </div>
         <button type="button" id="refresh-likes" class="btn btn-header" title="Reload likes from SoundCloud">Refresh</button>
       </div>
@@ -162,8 +162,13 @@
       </div>
 
       <div id="active-tag-bar" class="active-label-bar active-tag-bar hidden">
-        <span>Active Tag: <strong id="tag-filter-name"></strong></span>
-        <button type="button" id="clear-tag-filter" class="chip-clear" aria-label="Clear tag filter">×</button>
+        <span>SC tag: <strong id="tag-filter-name"></strong></span>
+        <button type="button" id="clear-tag-filter" class="chip-clear" aria-label="Clear SC tag filter">×</button>
+      </div>
+
+      <div id="active-user-tag-bar" class="active-label-bar active-user-tag-bar hidden">
+        <span>My tag: <strong id="user-tag-filter-name"></strong></span>
+        <button type="button" id="clear-user-tag-filter" class="chip-clear" aria-label="Clear my tag filter">×</button>
       </div>
 
       <div id="active-clips-bar" class="active-label-bar active-clips-bar hidden">
@@ -254,8 +259,13 @@
       </label>
 
       <details id="top-tags" class="top-labels collapsible-section">
-        <summary class="collapsible-summary">Top Genres &amp; Tags</summary>
+        <summary class="collapsible-summary">SoundCloud Tags</summary>
         <div id="top-tags-list" class="tag-chips"></div>
+      </details>
+
+      <details id="my-tags" class="top-labels collapsible-section">
+        <summary class="collapsible-summary"><span id="my-tags-summary">My Tags</span></summary>
+        <div id="my-tags-list" class="tag-chips user-tag-chips"></div>
       </details>
 
       <details id="top-artists" class="top-labels collapsible-section">
@@ -308,6 +318,7 @@
               <th class="sortable" data-sort="title">Title</th>
               <th class="sortable" data-sort="username">Artist</th>
               <th class="sortable" data-sort="label_name">Label</th>
+              <th>My Tags</th>
               <th class="sortable num" data-sort="playback_count">Plays</th>
               <th class="sortable num" data-sort="likes_count">Likes</th>
               <th class="sortable num" data-sort="followers_count">Followers</th>
