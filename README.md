@@ -69,9 +69,9 @@ All data stays on your device. No analytics, no external servers.
 
 ## Chrome Web Store checklist
 
-- [ ] Replace `YOUR_USERNAME` in `docs/privacy.html`, `docs/index.html`, and `sidepanel.js` (`PRIVACY_POLICY_URL`)
+- [x] Replace `YOUR_USERNAME` in `docs/privacy.html`, `docs/index.html`, and `sidepanel.js` (`PRIVACY_POLICY_URL`)
 - [ ] GitHub Pages: Settings → Pages → `/docs` folder
-- [ ] Privacy URL: `https://YOUR_USERNAME.github.io/Soundcloud_Hidden_Gems/privacy.html`
+- [ ] Privacy URL: `https://rentovskiy-cell.github.io/Soundcloud_Hidden_Gems/privacy.html`
 - [ ] 3–5 screenshots of the side panel
 - [ ] Zip `chrome-extension/` for upload (or publish via Chrome Web Store dashboard)
 

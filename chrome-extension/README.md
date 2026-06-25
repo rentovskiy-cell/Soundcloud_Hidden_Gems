@@ -12,6 +12,6 @@ Full docs: [../README.md](../README.md)
 
 ## Before Chrome Web Store
 
-1. Replace `YOUR_USERNAME` in `sidepanel.js` (`PRIVACY_POLICY_URL`) and `docs/`
+1. Privacy policy URL is set in `sidepanel.js` (`PRIVACY_POLICY_URL`) and `docs/`
 2. Enable GitHub Pages on `/docs`
 3. Take 3–5 side panel screenshots

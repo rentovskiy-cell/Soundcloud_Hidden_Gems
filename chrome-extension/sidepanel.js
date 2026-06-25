@@ -5,7 +5,7 @@ const STORAGE_LIKES_CACHE = "sc-hidden-gems-likes-cache";
 const STORAGE_USER_TAGS = "sc-hidden-gems-user-tags";
 const EXTENSION_VERSION = "2.1.2";
 const PRIVACY_POLICY_URL =
-  "https://github.com/YOUR_USERNAME/Soundcloud_Hidden_Gems/blob/main/docs/privacy.html";
+  "https://github.com/rentovskiy-cell/Soundcloud_Hidden_Gems/blob/main/docs/privacy.html";
 const BUILTIN_PRESET_NAME = "Default";
 
 const REMOVED_PRESET_NAMES = new Set([
