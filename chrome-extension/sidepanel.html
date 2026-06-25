@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SoundCloud Hidden Gems</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <main class="panel">
+    <header class="header">
+      <div class="header-row">
+        <div class="header-title-wrap">
+          <h1>SoundCloud Hidden Gems</h1>
+          <span id="version-label" class="version-label">v2.0.0</span>
+        </div>
+        <button type="button" id="refresh-likes" class="btn btn-header" title="Reload likes from SoundCloud">Refresh</button>
+      </div>
+      <p id="user-label" class="muted">Waiting for SoundCloud tab…</p>
+      <p id="cache-info" class="cache-info hidden"></p>
+    </header>
+
+    <div id="onboarding" class="onboarding">
+      <h2 class="onboarding-title">Get started</h2>
+      <ol class="onboarding-steps">
+        <li>Open <strong>soundcloud.com</strong> and sign in</li>
+        <li>Click the orange <strong>Hidden Gems</strong> button on the page</li>
+        <li>Or use the buttons below to open SoundCloud and load likes here</li>
+      </ol>
+      <div class="onboarding-actions">
+        <button type="button" id="open-soundcloud" class="btn btn-onboarding-primary">Open SoundCloud</button>
+        <button type="button" id="onboarding-load" class="btn btn-onboarding">Load likes</button>
+      </div>
+      <p class="onboarding-note">
+        Your likes and gems are stored locally on this device only.
+        <a id="privacy-link" class="onboarding-privacy" href="#" target="_blank" rel="noopener">Privacy policy</a>
+      </p>
+    </div>
+
+    <div id="status" class="status hidden">Loading your likes…</div>
+
+    <div id="progress-wrap" class="progress-wrap hidden">
+      <div class="progress-bar">
+        <div id="progress-fill" class="progress-fill"></div>
+      </div>
+      <p id="progress-text" class="progress-text">Starting…</p>
+    </div>
+
+    <div id="main-ui" class="main-ui hidden">
+      <div class="tabs">
+        <button type="button" id="tab-all" class="tab active">All Tracks</button>
+        <button type="button" id="tab-gems" class="tab">My Gems</button>
+        <button type="button" id="tab-session" class="tab tab-session hidden">Session</button>
+      </div>
+
+      <div id="gems-bar" class="session-bar gems-bar hidden">
+        <div class="session-bar-info">
+          <strong id="gems-bar-count">0</strong> saved gems
+        </div>
+        <div class="session-bar-actions">
+          <button type="button" id="gems-export-json" class="btn btn-session">Export JSON</button>
+          <button type="button" id="gems-copy-urls" class="btn btn-session">Copy URLs</button>
+        </div>
+      </div>
+
+      <div id="session-bar" class="session-bar hidden">
+        <div class="session-bar-info">
+          <strong id="session-gem-count">0</strong> gems this session
+        </div>
+        <div class="session-bar-actions">
+          <button type="button" id="session-view" class="btn btn-session">View session gems</button>
+          <button type="button" id="session-export-json" class="btn btn-session">Export JSON</button>
+          <button type="button" id="session-copy-urls" class="btn btn-session">Copy URLs</button>
+          <button type="button" id="session-clear" class="btn btn-session">Clear session</button>
+        </div>
+      </div>
+
+      <p class="current-preset-line">
+        Current Preset: <strong id="current-preset-display">Default</strong>
+      </p>
+
+      <div id="active-filter-summary" class="active-filter-summary active-filter-summary-compact">
+        <h3>Active Filters</h3>
+        <ul id="active-filter-list" class="active-filter-list"></ul>
+      </div>
+
+      <details id="filters" class="filters collapsible-section">
+        <summary class="collapsible-summary">Filters</summary>
+        <div class="filters-body">
+          <div class="presets">
+            <label class="field-label">
+              <span>Preset</span>
+              <select id="preset-select"></select>
+            </label>
+            <div class="preset-actions">
+              <button type="button" id="save-preset" class="btn">Save Current as New</button>
+              <button type="button" id="rename-preset" class="btn">Rename</button>
+              <button type="button" id="delete-preset" class="btn btn-danger">Delete</button>
+            </div>
+          </div>
+
+          <label class="slider-label">
+            <span>Max Plays</span>
+            <output id="plays-out">5,000</output>
+          </label>
+          <input type="range" id="max-plays" min="100" max="100000" step="100" value="5000">
+
+          <label class="slider-label">
+            <span>Max Followers</span>
+            <output id="followers-out">5,000</output>
+          </label>
+          <input type="range" id="max-followers" min="100" max="100000" step="100" value="5000">
+
+          <label class="slider-label">
+            <span>Max Duration (min)</span>
+            <output id="duration-out">20</output>
+          </label>
+          <input type="range" id="max-duration" min="1" max="120" step="1" value="20">
+
+          <label class="field-label">
+            <span>Liked Within</span>
+            <select id="liked-within">
+              <option value="all">All Time</option>
+              <option value="30">Last 30 Days</option>
+              <option value="90">Last 90 Days</option>
+              <option value="180">Last 6 Months</option>
+              <option value="365">Last Year</option>
+              <option value="older365">Older Than 1 Year</option>
+              <option value="older730">Older Than 2 Years</option>
+              <option value="older1095">Older Than 3 Years</option>
+            </select>
+          </label>
+
+          <div class="checkbox-group">
+            <label><input type="checkbox" id="exclude-mixes" checked> Exclude DJ Mixes</label>
+            <label><input type="checkbox" id="exclude-podcasts" checked> Exclude Podcasts</label>
+            <label><input type="checkbox" id="exclude-live" checked> Exclude Live Sets</label>
+            <label><input type="checkbox" id="hide-seen"> Hide Seen Tracks</label>
+          </div>
+
+          <label class="field-label">
+            <span>Clips / Snippets</span>
+            <select id="clips-filter">
+              <option value="hide">Hide (full tracks only)</option>
+              <option value="any">Show all</option>
+              <option value="only">Clips &amp; snippets only</option>
+            </select>
+          </label>
+
+          <button type="button" id="reset-filters" class="btn btn-reset">Reset Filters</button>
+        </div>
+      </details>
+
+      <div id="active-label-bar" class="active-label-bar hidden">
+        <span>Active Label: <strong id="label-filter-name"></strong></span>
+        <button type="button" id="clear-label-filter" class="chip-clear" aria-label="Clear label filter">×</button>
+      </div>
+
+      <div id="active-artist-bar" class="active-label-bar active-artist-bar hidden">
+        <span>Active Artist: <strong id="artist-filter-name"></strong></span>
+        <button type="button" id="clear-artist-filter" class="chip-clear" aria-label="Clear artist filter">×</button>
+      </div>
+
+      <div id="active-tag-bar" class="active-label-bar active-tag-bar hidden">
+        <span>Active Tag: <strong id="tag-filter-name"></strong></span>
+        <button type="button" id="clear-tag-filter" class="chip-clear" aria-label="Clear tag filter">×</button>
+      </div>
+
+      <div id="active-clips-bar" class="active-label-bar active-clips-bar hidden">
+        <span>Showing <strong>clips &amp; snippets</strong> only</span>
+        <button type="button" id="clear-clips-only" class="chip-clear" aria-label="Exit clips-only mode">×</button>
+      </div>
+
+      <div id="clips-quick-bar" class="clips-quick-bar hidden">
+        <span><strong id="clips-count">0</strong> clips/snippets in your likes</span>
+        <button type="button" id="browse-clips" class="btn btn-clips-quick">Browse clips only</button>
+      </div>
+
+      <div id="now-playing" class="now-playing">
+        <h2>Now Playing</h2>
+        <p id="np-title" class="np-title">—</p>
+        <p id="np-artist" class="np-artist">—</p>
+        <div class="np-controls">
+          <button type="button" id="np-previous" class="btn btn-np" disabled>Previous</button>
+          <button type="button" id="np-play-pause" class="btn btn-np btn-np-primary">Play</button>
+        </div>
+        <div class="dig-panel">
+          <div class="dig-row">
+            <button type="button" id="dig-toggle" class="btn btn-dig">Start Dig Session</button>
+            <label class="dig-advance-label">
+              <span>Advance after</span>
+              <select id="dig-advance">
+                <option value="percent:50">50% of track</option>
+                <option value="percent:75">75% of track</option>
+                <option value="seconds:30">30 seconds</option>
+                <option value="seconds:60">60 seconds</option>
+                <option value="seconds:90">90 seconds</option>
+              </select>
+            </label>
+          </div>
+          <p id="dig-status" class="dig-status hidden"></p>
+        </div>
+        <p id="playback-error" class="playback-error hidden"></p>
+      </div>
+
+      <div id="stats-compact" class="stats-compact">
+        <div class="stat stat-primary">
+          <span class="stat-label">Matching</span>
+          <strong id="stat-matching">0</strong>
+        </div>
+        <div class="stat stat-primary">
+          <span class="stat-label">Unseen</span>
+          <strong id="stat-unseen">0</strong>
+        </div>
+      </div>
+
+      <details id="stats-more" class="stats collapsible-section">
+        <summary class="collapsible-summary"><span id="stats-summary">More stats</span></summary>
+        <div class="stat">
+          <span class="stat-label">Total liked tracks</span>
+          <strong id="stat-total">0</strong>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Clips / snippets</span>
+          <strong id="stat-clips">0</strong>
+        </div>
+        <div class="stat">
+          <span class="stat-label">My Gems</span>
+          <strong id="stat-gems">0</strong>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Session gems</span>
+          <strong id="stat-session-gems">0</strong>
+        </div>
+        <div id="stat-avg-plays-wrap" class="stat">
+          <span class="stat-label">Average plays</span>
+          <strong id="stat-avg-plays">N/A</strong>
+        </div>
+        <div id="stat-avg-followers-wrap" class="stat">
+          <span class="stat-label">Average followers</span>
+          <strong id="stat-avg-followers">N/A</strong>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Seen tracks</span>
+          <strong id="stat-seen">0</strong>
+        </div>
+      </details>
+
+      <p id="no-matches-notice" class="no-matches-notice hidden">No tracks match current filters.</p>
+
+      <label class="search-wrap">
+        <span class="search-label">Search</span>
+        <input type="search" id="track-search" class="search-input" placeholder="Title, artist, label, genre, tags…" autocomplete="off">
+      </label>
+
+      <details id="top-tags" class="top-labels collapsible-section">
+        <summary class="collapsible-summary">Top Genres &amp; Tags</summary>
+        <div id="top-tags-list" class="tag-chips"></div>
+      </details>
+
+      <details id="top-artists" class="top-labels collapsible-section">
+        <summary class="collapsible-summary">Top Artists</summary>
+        <div id="top-artists-list" class="top-labels-list"></div>
+      </details>
+
+      <details id="top-labels" class="top-labels collapsible-section">
+        <summary class="collapsible-summary">Top Labels</summary>
+        <div id="top-labels-list" class="top-labels-list"></div>
+      </details>
+
+      <details id="browse-artists" class="top-labels collapsible-section browse-section">
+        <summary class="collapsible-summary"><span id="browse-artists-summary">All Artists</span></summary>
+        <div class="browse-controls">
+          <input type="search" id="browse-artists-search" class="browse-search" placeholder="Search artists…" autocomplete="off">
+          <label class="browse-min-label">
+            <span>Show</span>
+            <select id="browse-artists-min">
+              <option value="1">All (incl. 1 track)</option>
+              <option value="2">2+ tracks</option>
+              <option value="5">5+ tracks</option>
+            </select>
+          </label>
+        </div>
+        <div id="browse-artists-list" class="browse-list"></div>
+      </details>
+
+      <details id="browse-labels" class="top-labels collapsible-section browse-section">
+        <summary class="collapsible-summary"><span id="browse-labels-summary">All Labels</span></summary>
+        <div class="browse-controls">
+          <input type="search" id="browse-labels-search" class="browse-search" placeholder="Search labels…" autocomplete="off">
+          <label class="browse-min-label">
+            <span>Show</span>
+            <select id="browse-labels-min">
+              <option value="1">All (incl. 1 track)</option>
+              <option value="2">2+ tracks</option>
+              <option value="5">5+ tracks</option>
+            </select>
+          </label>
+        </div>
+        <div id="browse-labels-list" class="browse-list"></div>
+      </details>
+
+      <div id="table-wrap" class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th class="col-star"></th>
+              <th class="sortable" data-sort="title">Title</th>
+              <th class="sortable" data-sort="username">Artist</th>
+              <th class="sortable" data-sort="label_name">Label</th>
+              <th class="sortable num" data-sort="playback_count">Plays</th>
+              <th class="sortable num" data-sort="likes_count">Likes</th>
+              <th class="sortable num" data-sort="followers_count">Followers</th>
+              <th class="sortable num" data-sort="duration">Duration</th>
+              <th class="sortable num" data-sort="played_at">Date Liked</th>
+              <th class="sortable num" data-sort="liked_age">Liked Age</th>
+              <th class="col-play">Play</th>
+              <th>Open</th>
+            </tr>
+          </thead>
+          <tbody id="tracks-body"></tbody>
+        </table>
+      </div>
+
+      <button type="button" id="next-gem-fab" class="next-gem-fab" disabled>Next Gem</button>
+    </div>
+
+    <div id="error" class="error hidden"></div>
+  </main>
+  <script src="playback.js"></script>
+  <script src="sidepanel.js"></script>
+</body>
+</html>

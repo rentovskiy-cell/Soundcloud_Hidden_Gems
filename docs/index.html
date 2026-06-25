@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SoundCloud Hidden Gems</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0f1117;
+      --card: #171a22;
+      --text: #e8eaef;
+      --muted: #8b93a7;
+      --accent: #ff5500;
+      --border: #2a3144;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    main { max-width: 480px; text-align: center; }
+    .logo { width: 72px; height: 72px; border-radius: 16px; margin-bottom: 16px; }
+    h1 { font-size: 1.5rem; margin: 0 0 8px; }
+    p { color: var(--muted); font-size: 0.9375rem; margin: 0 0 24px; }
+    .links { display: flex; flex-direction: column; gap: 10px; }
+    a {
+      display: block;
+      padding: 12px 16px;
+      border-radius: 8px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      text-decoration: none;
+      font-size: 0.9375rem;
+    }
+    a:hover { border-color: var(--accent); }
+    a.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+    .disclaimer { margin-top: 28px; font-size: 0.75rem; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <main>
+    <img class="logo" src="icon128.png" alt="" width="72" height="72">
+    <h1>SoundCloud Hidden Gems</h1>
+    <p>Dig through your SoundCloud likes and find underground tracks worth keeping.</p>
+    <div class="links">
+      <a class="primary" href="https://github.com/YOUR_USERNAME/Soundcloud_Hidden_Gems">View on GitHub</a>
+      <a href="privacy.html">Privacy Policy</a>
+    </div>
+    <p class="disclaimer">Unofficial tool — not affiliated with SoundCloud.</p>
+  </main>
+</body>
+</html>

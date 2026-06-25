@@ -1,0 +1,18 @@
+# Personal SoundCloud exports (large, private)
+hidden-gems*.json
+
+# Legacy local web app (optional — remove this line if you want to include it)
+# index.html
+# app.js
+# styles.css
+# low-playback-likes.js
+
+# OS & editor
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.cursor/
+
+# Empty duplicate git scaffold
+Soundcloud_Hidden_Gems/

@@ -1,0 +1,44 @@
+{
+  "manifest_version": 3,
+  "name": "SoundCloud Hidden Gems",
+  "version": "2.0.0",
+  "description": "Explore your SoundCloud likes and find hidden gems.",
+  "permissions": ["sidePanel", "activeTab", "tabs", "storage"],
+  "host_permissions": [
+    "https://*.soundcloud.com/*",
+    "https://api-v2.soundcloud.com/*"
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://*.soundcloud.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["page-bridge.js", "player-bridge.js"],
+      "matches": ["https://*.soundcloud.com/*"]
+    }
+  ],
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "action": {
+    "default_title": "SoundCloud Hidden Gems",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png"
+    }
+  }
+}
